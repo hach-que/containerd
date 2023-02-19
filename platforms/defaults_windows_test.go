@@ -176,3 +176,123 @@ func TestMatchComparerLess(t *testing.T) {
 	})
 	assert.Equal(t, expected, platforms)
 }
+
+func TestMatchComparerClientOSMatch(t *testing.T) {
+	m1 := matchComparer{
+		defaults: Only(imagespec.Platform{
+			Architecture: "amd64",
+			OS:           "windows",
+		}),
+		osVersionPrefix: "10.0.22000",
+		isClientOS:      true,
+	}
+
+	m2 := matchComparer{
+		defaults: Only(imagespec.Platform{
+			Architecture: "amd64",
+			OS:           "windows",
+		}),
+		osVersionPrefix: "10.0.22621",
+		isClientOS:      true,
+	}
+
+	for _, test := range []struct {
+		platform imagespec.Platform
+		match    bool
+	}{
+		{
+			platform: imagespec.Platform{
+				Architecture: "amd64",
+				OS:           "windows",
+				OSVersion:    "10.0.17763.2114",
+			},
+			match: false,
+		},
+		{
+			platform: imagespec.Platform{
+				Architecture: "amd64",
+				OS:           "windows",
+				OSVersion:    "10.0.20348.169",
+			},
+			match: true,
+		},
+		{
+			platform: imagespec.Platform{
+				Architecture: "amd64",
+				OS:           "windows",
+				OSVersion:    "10.0.22000",
+			},
+			match: true,
+		},
+		{
+			platform: imagespec.Platform{
+				Architecture: "amd64",
+				OS:           "windows",
+			},
+			match: true,
+		},
+		{
+			platform: imagespec.Platform{
+				Architecture: "amd64",
+				OS:           "linux",
+			},
+			match: false,
+		},
+	} {
+		assert.Equal(t, test.match, m1.Match(test.platform), "should match %b, to %s", test.match, test.platform)
+		assert.Equal(t, test.match, m2.Match(test.platform), "should match %b, to %s", test.match, test.platform)
+	}
+}
+
+func TestMatchComparerClientOSPriority(t *testing.T) {
+	m1 := matchComparer{
+		defaults: Only(imagespec.Platform{
+			Architecture: "amd64",
+			OS:           "windows",
+		}),
+		osVersionPrefix: "10.0.22000",
+		isClientOS:      true,
+	}
+
+	m2 := matchComparer{
+		defaults: Only(imagespec.Platform{
+			Architecture: "amd64",
+			OS:           "windows",
+		}),
+		osVersionPrefix: "10.0.22621",
+		isClientOS:      true,
+	}
+
+	platforms := []imagespec.Platform{
+		{
+			Architecture: "amd64",
+			OS:           "windows",
+			OSVersion:    "10.0.20348.169",
+		},
+		{
+			Architecture: "amd64",
+			OS:           "windows",
+			OSVersion:    "10.0.22000",
+		},
+	}
+	expected := []imagespec.Platform{
+		{
+			Architecture: "amd64",
+			OS:           "windows",
+			OSVersion:    "10.0.22000",
+		},
+		{
+			Architecture: "amd64",
+			OS:           "windows",
+			OSVersion:    "10.0.20348.169",
+		},
+	}
+	sort.SliceStable(platforms, func(i, j int) bool {
+		return m1.Less(platforms[i], platforms[j])
+	})
+	assert.Equal(t, expected, platforms)
+	sort.SliceStable(platforms, func(i, j int) bool {
+		return m2.Less(platforms[i], platforms[j])
+	})
+	assert.Equal(t, expected, platforms)
+}
